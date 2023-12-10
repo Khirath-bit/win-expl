@@ -1,0 +1,12 @@
+[package]
+name = "win-expl"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+nwg = { version = "^1.0.13", package = "native-windows-gui" }
+time = { version = "0.3.30", features = ["formatting"] }
+winapi = "0.3.9"
+
+[build-dependencies]
+embed-manifest = "1"
