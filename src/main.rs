@@ -6,6 +6,7 @@ mod components;
 mod event_handler;
 mod resource_manager;
 mod search_engine;
+mod win;
 
 #[macro_export]
 macro_rules! debug {

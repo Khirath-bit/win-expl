@@ -4,6 +4,8 @@ use crate::search_engine::SearchEngineResult;
 #[derive(Default)]
 pub struct ResultList {
     pub view: nwg::ListView,
+    pub item_context_menu: nwg::Menu,
+    pub item_context_menu_copy: nwg::MenuItem 
 }
 
 impl ResultList {

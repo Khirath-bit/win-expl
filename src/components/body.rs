@@ -56,5 +56,14 @@ pub fn load(data: &mut BasicApp) -> Result<(), NwgError>{
 
     data.result_list.view.set_headers_enabled(true);
 
+    nwg::Menu::builder()
+    .popup(true)
+    .parent(&data.window)
+    .build(&mut data.result_list.item_context_menu).unwrap();
+    nwg::MenuItem::builder()
+    .parent(&data.result_list.item_context_menu)
+    .text("Copy path")
+    .build(&mut data.result_list.item_context_menu_copy).unwrap();
+
     Ok(())
 }

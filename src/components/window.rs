@@ -2,6 +2,8 @@ use nwg::NwgError;
 
 use crate::app::BasicApp;
 use winapi::um::{winuser::{self, GCLP_HBRBACKGROUND}, wingdi::{CreateSolidBrush, RGB}};
+use winapi::{um::dwmapi::DwmSetWindowAttribute, shared::winerror::SUCCEEDED};
+use winapi::shared::minwindef::DWORD;
 
 pub fn load(data: &mut BasicApp) -> Result<(), NwgError> {
     let w = 1200;
@@ -20,7 +22,16 @@ pub fn load(data: &mut BasicApp) -> Result<(), NwgError> {
     unsafe {
         let brush = CreateSolidBrush(RGB(50, 50, 50)) as winapi::shared::basetsd::LONG_PTR;
         winuser::SetClassLongPtrA(data.window.handle.hwnd().unwrap(), GCLP_HBRBACKGROUND, brush);
+        let result = DwmSetWindowAttribute(
+            data.window.handle.hwnd().unwrap(),
+            20,
+            &1 as *const _ as *const winapi::ctypes::c_void,
+            std::mem::size_of_val(&1) as DWORD,
+        );
+
+        SUCCEEDED(result);
     }
+
     nwg::Window::invalidate(&data.window);
 
     Ok(())

@@ -1,5 +1,7 @@
 use std::{fs::DirEntry, os::windows::fs::MetadataExt};
 
+use crate::win::file_attributes::FileAttributes;
+
 pub struct SearchEngineParameter {
     pub depth: usize,
     pub term: String,
@@ -8,11 +10,6 @@ pub struct SearchEngineParameter {
     pub search_bin_dirs: bool,
     pub search_lib_dirs: bool,
     pub search_tmp_dirs: bool
-}
-#[allow(non_camel_case_types)]
-enum FileAttributes {
-    FILE_ATTRIBUTE_READONLY = 1,
-    FILE_ATTRIBUTE_HIDDEN = 2,
 }
 
 impl SearchEngineParameter {

@@ -15,6 +15,7 @@ pub struct BasicApp {
     pub last_page_btn: nwg::Button,
     pub next_page_btn: nwg::Button,
     pub refresh_page_btn: nwg::Button,
+    pub copy_path_btn: nwg::Button,
     pub search_input: nwg::TextInput,
     pub body_layout: nwg::GridLayout,
     pub result_list: ResultList,
@@ -26,6 +27,10 @@ impl BasicApp {
 
     pub fn say_hello(&self) {
         nwg::modal_info_message(&self.window, "Hello", "Hello");
+    }
+
+    pub fn display_error(&self, e: String) {
+        nwg::modal_error_message(&self.window, "Error occurred", &e);
     }
 }
 

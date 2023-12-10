@@ -1,14 +1,15 @@
 use std::rc::Rc;
 use nwg::EventData;
-use winapi::um::winuser;
+use winapi::{um::winuser::{self, GetCursorPos}, shared::windef::POINT};
 
-use crate::{app::{BasicApp, BasicAppUi}, search_engine::SearchEngine};
+use clipboard::{ClipboardContext, ClipboardProvider};
+use crate::{app::{BasicApp, BasicAppUi}, search_engine::SearchEngine, win::key_codes::VirtualKeyCode};
 
 pub fn handle_events(ui: &mut BasicAppUi){
     use nwg::Event as E;
 
     let evt_ui = Rc::downgrade(&ui.inner);
-        let handle_events = move |evt, _evt_data : EventData, handle| {
+        let handle_events = move |evt, evt_data : EventData, handle| {
             if let Some(app) = evt_ui.upgrade() {
                 match evt {
                     E::OnButtonClick => {
@@ -23,6 +24,9 @@ pub fn handle_events(ui: &mut BasicAppUi){
                             app.path_bar.move_one_up();
                             //triggers event
                             app.search_input.set_text("");
+                        } else if handle == app.copy_path_btn {
+                            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                            ctx.set_contents(app.path_bar.get_path().unwrap()).unwrap();
                         }
                     }
                     E::OnWindowClose => {
@@ -33,30 +37,58 @@ pub fn handle_events(ui: &mut BasicAppUi){
                     E::OnTextInput => {
                         if handle == app.search_input {
                             let txt = app.search_input.text();
-                            app.result_list.refresh(SearchEngine::search(&txt, &app.path_bar.get_path().unwrap(), 0))
+                            let pth = app.path_bar.get_path();
+                            if let Err(e) = pth {
+                                app.display_error(e);
+                            } else {
+                                app.result_list.refresh(SearchEngine::search(&txt, &pth.unwrap(), 0))
+                            }
                         }
                     }
                     E::OnListViewColumnClick => {
                         if handle == app.result_list.view {
                             let txt = app.search_input.text();
-                            app.result_list.sort_by_column(_evt_data.on_list_view_item_index().1.try_into().unwrap(), SearchEngine::search(&txt, &app.path_bar.get_path().unwrap(), 0).collect());
+                            app.result_list.sort_by_column(evt_data.on_list_view_item_index().1.try_into().unwrap(), SearchEngine::search(&txt, &app.path_bar.get_path().unwrap(), 0).collect());
                         }
                             
                     }
                     E::OnListViewDoubleClick => {
                         if handle == app.result_list.view {
-                            let (row, _col) = _evt_data.on_list_view_item_index();
+                            let (row, _col) = evt_data.on_list_view_item_index();
                             let file_type = app.result_list.view.item(row, 2, 10).unwrap().text;
+                            let res = app.result_list.view.item(row, 4, 260).unwrap();      
                             if !file_type.eq("Directory") {
-                                println!("{}", file_type);
+                                let _ = open::that(&res.text);
                                 return;
                             }
-                            let res = app.result_list.view.item(row, 4, 260).unwrap();                            
+                                                  
                             let path = res.text;
 
                             app.path_bar.move_into_directory(path);
                             //triggers event
                             app.search_input.set_text("");
+                        }
+                    }
+                    E::OnKeyPress => {
+                        //VKRETURN = Enter https://learn.microsoft.com/en-us/windows/win32/inputdev/virtual-key-codes
+                        if handle == app.path_bar.view && evt_data.on_key() == VirtualKeyCode::VK_RETURN as u32 {
+                            //triggers event
+                            app.search_input.set_text("");
+                        }
+                    }
+                    E::OnListViewRightClick => {
+                        if handle == app.result_list.view {                            
+                            let mut cursor_pos: POINT = POINT { x: 0, y: 0 };
+                            unsafe {
+                                GetCursorPos(&mut cursor_pos);
+                            }
+                            app.result_list.item_context_menu.popup(cursor_pos.x, cursor_pos.y);
+                        }
+                    }
+                    E::OnMenuItemSelected => {
+                        if handle == app.result_list.item_context_menu_copy {
+                            let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+                            todo!("Save the index from E::OnListViewRightClick and use it here to select the full path from the hidden column 4")
                         }
                     }
                     _ => {}
