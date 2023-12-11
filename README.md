@@ -1,4 +1,6 @@
 # Faster win explorer
+[![build](https://github.com/Khirath-bit/win-expl/actions/workflows/build.yml/badge.svg)](https://github.com/Khirath-bit/win-expl/actions/workflows/build.yml)
+
 
 ## TODOS
 - Features:
