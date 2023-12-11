@@ -9,7 +9,8 @@ pub struct SearchEngineParameter {
     pub search_hidden_dirs: bool,
     pub search_bin_dirs: bool,
     pub search_lib_dirs: bool,
-    pub search_tmp_dirs: bool
+    pub search_tmp_dirs: bool,
+    pub search_windows_folder: bool,
 }
 
 impl SearchEngineParameter {
@@ -17,19 +18,20 @@ impl SearchEngineParameter {
         let parts: Vec<String> = t.split('!').map(|s| s.to_string()).collect();
 
         let mut params = SearchEngineParameter {
-            term: parts.first().unwrap().into(),
+            term: parts.first().unwrap().trim().into(),
             depth: 0,
             search_readonly_dirs: false,
             search_hidden_dirs: false,
             search_bin_dirs: false,
             search_lib_dirs: false,
             search_tmp_dirs: false,
+            search_windows_folder: false,
         };
 
         for pa in parts.iter().skip(1) {
             let p = pa.trim();
-            if p.starts_with("d=") {
-                if let Ok(d) = p.replace("d=", "").parse::<usize>() {
+            if p.starts_with('d') {
+                if let Ok(d) = p.replace('d', "").parse::<usize>() {
                     params.depth = d;
                 }
             } else if p.eq("r") {
@@ -42,6 +44,8 @@ impl SearchEngineParameter {
                 params.search_lib_dirs = true;
             } else if p.eq("t") {
                 params.search_tmp_dirs = true;
+            } else if p.eq("w") {
+                params.search_windows_folder = true;
             }
         }
 
@@ -66,15 +70,19 @@ impl SearchEngineParameter {
         }
 
         if !p.search_bin_dirs {
-            can_be &= !name.eq("bin");
+            can_be &= !name.to_lowercase().eq("bin");
         }
 
         if !p.search_lib_dirs {
-            can_be &= !name.eq("lib");
+            can_be &= !name.to_lowercase().eq("lib");
         }
 
         if !p.search_tmp_dirs {
-            can_be &= !name.eq("tmp");
+            can_be &= !name.to_lowercase().eq("tmp");
+        }
+
+        if !p.search_windows_folder {
+            can_be &= !name.to_lowercase().eq("windows");
         }
 
         can_be

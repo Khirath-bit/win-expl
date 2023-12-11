@@ -1,7 +1,9 @@
 use crate::components::list::ResultList;
 use crate::components::load_components;
 use crate::components::path_bar::PathBar;
+use crate::components::status_bar::ExplStatusBar;
 use crate::event_handler;
+use crate::memory::cache::Cache;
 use crate::resource_manager::Resources;
 
 use std::cell::RefCell;
@@ -20,11 +22,12 @@ pub struct BasicApp {
     pub body_layout: nwg::GridLayout,
     pub result_list: ResultList,
     pub path_bar: PathBar,
-    pub resource_manager: Resources
+    pub resource_manager: Resources,
+    pub status_bar: ExplStatusBar,
+    pub cache: Cache,
 }
 
 impl BasicApp {
-
     pub fn say_hello(&self) {
         nwg::modal_info_message(&self.window, "Hello", "Hello");
     }
@@ -41,7 +44,6 @@ pub struct BasicAppUi {
 
 impl nwg::NativeUi<BasicAppUi> for BasicApp {
     fn build_ui(mut data: BasicApp) -> Result<BasicAppUi, nwg::NwgError> {
-
         load_components(&mut data)?;
 
         let mut ui = BasicAppUi {

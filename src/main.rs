@@ -4,6 +4,7 @@ use nwg::NativeUi;
 mod app;
 mod components;
 mod event_handler;
+mod memory;
 mod resource_manager;
 mod search_engine;
 mod win;
