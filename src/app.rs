@@ -13,7 +13,7 @@ use std::rc::Rc;
 pub struct BasicApp {
     pub window: nwg::Window,
     pub name_edit: nwg::TextInput,
-    pub hello_button: nwg::Button,
+    pub directory_sidebar: nwg::ListView,
     pub last_page_btn: nwg::Button,
     pub next_page_btn: nwg::Button,
     pub refresh_page_btn: nwg::Button,

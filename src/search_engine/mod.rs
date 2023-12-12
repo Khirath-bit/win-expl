@@ -1,12 +1,14 @@
 use std::{
     fs::{self, DirEntry, FileType},
     os::windows::fs::MetadataExt,
-    time::SystemTime,
+    time::SystemTime, cell::RefCell,
 };
 
-use crate::search_engine::parameter_parser::SearchEngineParameter;
+use time::Instant;
 
-mod parameter_parser;
+use crate::{search_engine::parameter_parser::SearchEngineParameter, debug};
+
+pub mod parameter_parser;
 
 #[derive(Default, Clone)]
 pub struct SearchEngine {}
@@ -36,22 +38,33 @@ impl From<&DirEntry> for SearchEngineResult {
 
 impl SearchEngine {
     pub fn search<'a>(
-        t: &'a str,
+        p: &'a SearchEngineParameter,
         current_directory: &'a str,
         curr_depth: usize,
-    ) -> Vec<SearchEngineResult> {
-        let params = SearchEngineParameter::parse_search_term(t);
-
+        benchmark: &mut i128,
+        benchmark2: &mut i128,
+    ) -> Result<Vec<SearchEngineResult>, ()> {
         let results = fs::read_dir(current_directory);
         #[allow(unused_assignments)]
         let mut s_e_results: Vec<SearchEngineResult> = Vec::new();
 
+        let mut now = Instant::now();
         match results {
             Ok(r) => {
                 s_e_results = r
                     .filter_map(|entry| {
                         let e = entry.unwrap();
-                        if e.file_name().to_string_lossy().contains(&params.term) {
+                        let mut is_ok = match &p.term {
+                            Some(t) => e.file_name().to_string_lossy().contains(t),
+                            None => true,
+                        };
+
+                        is_ok &= match &p.extension {
+                            Some(t) => e.path().to_string_lossy().split('.').last().unwrap().contains(t),
+                            None => true,
+                        };
+
+                        if is_ok {
                             Some(SearchEngineResult::from(&e))
                         } else {
                             None
@@ -59,33 +72,38 @@ impl SearchEngine {
                     })
                     .collect();
             }
-            Err(_) => return vec![],
+            Err(_) => return Err(()),
         }
 
-        if curr_depth == params.depth {
-            return s_e_results;
+        *benchmark += now.elapsed().whole_nanoseconds();
+
+        if curr_depth == p.depth {
+            return Ok(s_e_results);
         }
 
+        now = Instant::now();
         let mut additional_results: Vec<SearchEngineResult> = Vec::new();
 
         let res_iter = fs::read_dir(current_directory).unwrap().filter_map(|f| {
             let r = f.unwrap();
             match r.file_type().unwrap().is_dir()
-                && SearchEngineParameter::dir_can_be_searched(&r, &params)
+                && SearchEngineParameter::dir_can_be_searched(&r, p)
             {
                 true => Some(r),
                 false => None,
             }
         });
 
+        *benchmark2 += now.elapsed().whole_nanoseconds();
+
         for f in res_iter {
-            let mut test: Vec<SearchEngineResult> =
-                SearchEngine::search(t, f.path().to_str().unwrap(), curr_depth + 1);
-            additional_results.append(&mut test);
+            if let Ok(mut test) = SearchEngine::search(p, f.path().to_str().unwrap(), curr_depth + 1, benchmark, benchmark2) {
+                additional_results.append(&mut test);
+            }
         }
 
         s_e_results.append(&mut additional_results);
 
-        s_e_results
+        Ok(s_e_results)
     }
 }

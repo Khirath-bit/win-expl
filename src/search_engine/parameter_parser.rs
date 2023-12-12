@@ -1,10 +1,14 @@
-use std::{fs::DirEntry, os::windows::fs::MetadataExt};
+use std::{fs::DirEntry, os::windows::fs::MetadataExt, error::Error};
+
+use time::Instant;
 
 use crate::win::file_attributes::FileAttributes;
 
+#[derive(Debug, Clone)]
 pub struct SearchEngineParameter {
     pub depth: usize,
-    pub term: String,
+    pub term: Option<String>,
+    pub extension: Option<String>,
     pub search_readonly_dirs: bool,
     pub search_hidden_dirs: bool,
     pub search_bin_dirs: bool,
@@ -14,11 +18,14 @@ pub struct SearchEngineParameter {
 }
 
 impl SearchEngineParameter {
-    pub fn parse_search_term(t: &str) -> SearchEngineParameter {
+    pub fn parse_search_term(t: &str) -> Result<SearchEngineParameter, ()> {
         let parts: Vec<String> = t.split('!').map(|s| s.to_string()).collect();
 
+        let file_args: Vec<String> = parts.first().unwrap().split('.').map(|s| s.to_string()).collect();
+
         let mut params = SearchEngineParameter {
-            term: parts.first().unwrap().trim().into(),
+            term: None,
+            extension: None,
             depth: 0,
             search_readonly_dirs: false,
             search_hidden_dirs: false,
@@ -27,6 +34,23 @@ impl SearchEngineParameter {
             search_tmp_dirs: false,
             search_windows_folder: false,
         };
+
+        if parts.first().unwrap().contains('.') {
+            if file_args.len() > 1 {
+                params.term = Some(file_args[0].clone());
+                params.extension = Some(file_args[1].clone());
+            } else {
+                params.extension = Some(file_args[0].clone());
+            }
+        } else {
+            params.term = Some(file_args[0].clone());
+        }
+
+        if let Some(ext) = &params.extension {
+            if ext.eq(""){
+                return Err(()); //No valid search term
+            }
+        }
 
         for pa in parts.iter().skip(1) {
             let p = pa.trim();
@@ -49,7 +73,7 @@ impl SearchEngineParameter {
             }
         }
 
-        params
+        Ok(params)
     }
 
     pub fn dir_can_be_searched(dir: &DirEntry, p: &SearchEngineParameter) -> bool {

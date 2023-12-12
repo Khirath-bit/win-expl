@@ -3,13 +3,13 @@ use std::rc::Rc;
 use time::Instant;
 use winapi::{
     shared::windef::POINT,
-    um::winuser::{self, GetCursorPos},
+    um::winuser::{self, GetCursorPos, GetScrollPos, SB_VERT, GetScrollRange},
 };
 
 use crate::{
     app::{BasicApp, BasicAppUi},
-    search_engine::SearchEngine,
-    win::key_codes::VirtualKeyCode,
+    search_engine::{SearchEngine, parameter_parser::SearchEngineParameter},
+    win::key_codes::VirtualKeyCode, debug,
 };
 use clipboard::{ClipboardContext, ClipboardProvider};
 
@@ -20,9 +20,7 @@ pub fn handle_events(ui: &mut BasicAppUi) {
         if let Some(app) = evt_ui.upgrade() {
             match evt {
                 E::OnButtonClick => {
-                    if handle == app.hello_button {
-                        BasicApp::say_hello(&app);
-                    } else if handle == app.refresh_page_btn {
+                    if handle == app.refresh_page_btn {
                         app.search_input.set_text("");
                         //TODO: error handling
                         //not required because setting the text triggers an event app.result_list.refresh(SearchEngine::default().search("", &app.path_bar.get_path().unwrap()))
@@ -49,13 +47,20 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                             app.display_error(e);
                         } else {
                             let now = Instant::now();
-                            let res = SearchEngine::search(&txt, &pth.unwrap(), 0);
-                            app.cache.current_results.replace(res.clone());
-                            app.result_list.refresh(res);
+                            let term = SearchEngineParameter::parse_search_term(&txt);
+                            if term.is_err() {
+                                return;
+                            }
+                            let mut searching_for_matches:i128 = 0;
+                            let mut validating_folder:i128 = 0;
+                            let res = SearchEngine::search(&term.unwrap(), &pth.unwrap(), 0, &mut searching_for_matches, &mut validating_folder);
+                            debug!(searching_for_matches/1000000, validating_folder);
+                            if res.is_err() {
+                                return; //Search term invalid. TODO: MAYBE inform user, but most likely search term isnt completed yet
+                            }
+                            app.cache.current_results.replace(res.clone().unwrap());
+                            app.result_list.refresh(res.unwrap());
                             let elapsed = now.elapsed();
-                            app.status_bar
-                                .result_count
-                                .set_text(&format!("{} results", app.result_list.view.len()));
                             app.status_bar
                                 .search_duration
                                 .set_text(&format!("{}ms", elapsed.whole_milliseconds()));
@@ -69,6 +74,15 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                             evt_data.on_list_view_item_index().1,
                             app.cache.current_results.borrow_mut().to_vec(),
                         );
+                    }
+                }
+                E::OnListViewClick => {
+                    if handle == app.directory_sidebar {
+                        let (row, _col) = evt_data.on_list_view_item_index();
+                        let path = app.directory_sidebar.item(row, 1, 260).unwrap().text;
+                        app.path_bar.move_into_directory(path);
+                        //triggers event
+                        app.search_input.set_text("");
                     }
                 }
                 E::OnListViewDoubleClick => {
@@ -122,6 +136,21 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                                 .text,
                         )
                         .unwrap();
+                    }
+                }
+                E::OnMouseWheel => {
+                    if handle == app.result_list.view {
+                        app.result_list.add_page(&app.cache);
+                        app.status_bar
+                                .result_count
+                                .set_text(&format!("{} results", app.result_list.view.len()));
+                    }
+                }
+                E::OnListViewItemInsert => {
+                    if handle == app.result_list.view {
+                        app.status_bar
+                                .result_count
+                                .set_text(&format!("{} results", app.result_list.view.len()));
                     }
                 }
                 _ => {}

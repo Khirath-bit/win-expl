@@ -1,14 +1,35 @@
-use nwg::{ListViewExFlags, ListViewStyle, NwgError};
+use nwg::{ListViewExFlags, ListViewStyle, NwgError, ListViewColumnFlags, ListViewFlags};
 
-use crate::app::BasicApp;
+use crate::{app::BasicApp, debug};
 
 pub fn load(data: &mut BasicApp) -> Result<(), NwgError> {
-    nwg::Button::builder()
-        .text("Say my name")
+    nwg::ListView::builder()
         .parent(&data.window)
         .size((100, 540))
+        .list_style(ListViewStyle::Detailed)
+        .flags(ListViewFlags::NO_HEADER |ListViewFlags::VISIBLE)
+        .ex_flags(ListViewExFlags::FULL_ROW_SELECT)
         .position((10, 50))
-        .build(&mut data.hello_button)?;
+        .build(&mut data.directory_sidebar)?;
+
+    //Add into with path %UserProfile%
+    data.directory_sidebar.insert_column(nwg::InsertListViewColumn {
+        index: Some(0),
+        fmt: None,
+        width: Some(100),
+        text: Some("Name".into()),
+    });
+
+    data.directory_sidebar.insert_column(nwg::InsertListViewColumn {
+        index: Some(1),
+        fmt: None,
+        width: Some(0),
+        text: Some("Path".into()),
+    });
+
+    let user_profile_path = std::env::var("UserProfile").unwrap();
+    data.directory_sidebar.insert_items_row(Some(0), &["Desktop", &(user_profile_path.clone() + "\\Desktop")]);
+    data.directory_sidebar.insert_items_row(Some(1), &["Downloads", &(user_profile_path + "\\Downloads")]);
 
     nwg::ListView::builder()
         .parent(&data.window)

@@ -1,7 +1,9 @@
 use std::cell::Cell;
 
-use crate::search_engine::SearchEngineResult;
-use time::{format_description, OffsetDateTime};
+use crate::{search_engine::SearchEngineResult, debug, memory::cache::Cache};
+use nwg::{InsertListViewItem, stretch::style::AlignItems};
+use time::{format_description, OffsetDateTime, Instant};
+use winapi::um::winuser::{GetScrollRange, SB_VERT, GetScrollPos};
 
 #[derive(Default)]
 pub struct ResultList {
@@ -9,6 +11,11 @@ pub struct ResultList {
     pub item_context_menu: nwg::Menu,
     pub item_context_menu_copy: nwg::MenuItem,
     pub context_menu_row_index: Cell<usize>,
+}
+
+struct ListItemInsert {
+    ind: Option<i32>, 
+    items: Vec<String>
 }
 
 #[derive(Default, Clone, Debug)]
@@ -62,7 +69,55 @@ impl ResultList {
 
     pub fn refresh(&self, results: Vec<SearchEngineResult>) {
         self.view.clear();
-        for (ind, f) in results.iter().enumerate() {
+        let mut now = Instant::now();
+        //TODO: magic number
+        let items = Self::prep_data(results, 0, 50);
+        let cleaning_data = now.elapsed().whole_milliseconds();
+        now = Instant::now();
+        for item in items {
+            nwg::ListView::insert_items_row(
+                &self.view,
+                item.ind,
+                item.items.as_slice(),
+            );
+        }
+        let printing_data = now.elapsed().whole_milliseconds();
+        debug!(cleaning_data, printing_data);
+    }
+
+    pub fn add_page(&self, cache: &Cache){
+        let hnd = self.view.handle.hwnd().unwrap();
+        let mut max_pos = 0;
+        let mut min_pos = 0;
+        unsafe {
+            GetScrollRange(hnd, SB_VERT as i32, &mut min_pos, &mut max_pos);
+        }
+        let vertical_scroll_pos = unsafe { GetScrollPos(hnd, SB_VERT as i32) };
+        if (vertical_scroll_pos - max_pos).abs() != 25 { //25 strangely appeared to be the offset to the bottom, maybe because of the style?
+            return;
+        }
+        let curr_res = cache.current_results.borrow_mut();
+        let len = self.view.len();
+        if len == curr_res.len() {
+            return;
+        }
+
+        //TODO: remove/work around clone!
+        let e = curr_res.clone();
+        let prep = Self::prep_data(e, len, 50);
+
+        for (ind, res) in  prep.iter().enumerate() {
+            nwg::ListView::insert_items_row(
+                &self.view,
+                Some((ind+len-1) as i32),
+                res.items.as_slice()
+            );
+        }
+    }
+
+    fn prep_data(results: Vec<SearchEngineResult>, skip: usize, take: usize) -> Vec<ListItemInsert> {
+        let mut items: Vec<ListItemInsert> = Vec::new();
+        for (ind, f) in results.iter().skip(skip).take(take).enumerate() {
             let chrono_time: OffsetDateTime = f.modified.into();
 
             let time = chrono_time
@@ -83,17 +138,19 @@ impl ResultList {
                 t if t.is_symlink() => format!("{} KiB", std::cmp::max(f.size / 1000, 1)),
                 _ => "".into(),
             };
-            nwg::ListView::insert_items_row(
-                &self.view,
-                Some(ind.try_into().unwrap()),
-                &[
+
+            items.push(ListItemInsert{
+                ind: Some(ind.try_into().unwrap()),
+                items: vec![
                     f.name.clone(),
                     time,
                     file_type_str.into(),
                     size,
                     f.full_path.clone(),
-                ],
-            );
+                ]
+            });
         }
+
+        items
     }
 }
