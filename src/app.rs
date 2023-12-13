@@ -1,7 +1,8 @@
-use crate::components::list::BodyControls;
+use crate::components::fav_dir_bar::FavoriteDirSidebar;
+use crate::components::header_control::HeaderControl;
 use crate::components::load_components;
-use crate::components::path_bar::PathBar;
-use crate::components::status_bar::ExplStatusBar;
+use crate::components::search_result_control::SearchResultControl;
+use crate::components::status_bar_control::StatusBarControl;
 use crate::event_handler;
 use crate::memory::cache::Cache;
 use crate::resource_manager::Resources;
@@ -12,18 +13,13 @@ use std::rc::Rc;
 #[derive(Default)]
 pub struct BasicApp {
     pub window: nwg::Window,
-    pub name_edit: nwg::TextInput,
-    pub last_page_btn: nwg::Button,
-    pub next_page_btn: nwg::Button,
-    pub refresh_page_btn: nwg::Button,
-    pub copy_path_btn: nwg::Button,
-    pub search_input: nwg::TextInput,
     pub body_layout: nwg::GridLayout,
     pub file_dialog: nwg::FileDialog,
-    pub body: BodyControls,
-    pub path_bar: PathBar,
+    pub header: HeaderControl,
+    pub search_results: SearchResultControl,
+    pub fav_dir_bar: FavoriteDirSidebar,
     pub resource_manager: Resources,
-    pub status_bar: ExplStatusBar,
+    pub status_bar: StatusBarControl,
     pub cache: Cache,
 }
 
@@ -49,7 +45,7 @@ impl nwg::NativeUi<BasicAppUi> for BasicApp {
 
         event_handler::handle_events(&mut ui);
 
-        ui.inner.search_input.set_text("");
+        ui.inner.header.search_input.set_text("");
 
         Ok(ui)
     }
@@ -64,11 +60,3 @@ impl Drop for BasicAppUi {
         }
     }
 }
-
-// impl Deref for BasicAppUi {
-//     type Target = BasicApp;
-
-//     fn deref(&self) -> &BasicApp {
-//         &self.inner.into()
-//     }
-// }

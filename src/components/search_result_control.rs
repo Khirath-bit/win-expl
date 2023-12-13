@@ -1,31 +1,20 @@
-use std::cell::Cell;
-
-use crate::{memory::cache::Cache, search_engine::SearchEngineResult};
-use nwg::EventData;
-use time::{format_description, OffsetDateTime};
-use winapi::{
-    shared::windef::POINT,
-    um::winuser::{GetCursorPos, GetScrollPos, GetScrollRange, SB_VERT},
-};
+use crate::{app::BasicApp, memory::cache::Cache, search_engine::SearchEngineResult};
+use clipboard::{ClipboardContext, ClipboardProvider};
+use time::{OffsetDateTime, format_description};
+use std::{cell::Cell, rc::Rc};
+use winapi::um::winuser::{GetScrollPos, GetScrollRange, SB_VERT};
 
 #[derive(Default)]
-pub struct BodyControls {
-    pub results: nwg::ListView,
-    pub item_context_menu: nwg::Menu,
-    pub item_context_menu_copy: nwg::MenuItem,
-    pub item_context_menu_add_to_fav: nwg::MenuItem,
-    pub item_context_menu_remove_as_fav: nwg::MenuItem,
-    pub directory_sidebar: nwg::ListView,
-    pub context_menu_row_index: Cell<usize>,
-    context_menu_target: Cell<ContextMenuTarget>,
+pub struct SearchResultControl {
+    pub list: nwg::ListView,
+    pub context_menu: nwg::Menu,
+    pub context_menu_items: SearchResultControlMenuItems,
+    pub(super) context_menu_context_row: Cell<usize>,
 }
-
 #[derive(Default)]
-enum ContextMenuTarget {
-    #[default]
-    None,
-    Sidebar,
-    ResultsList,
+pub struct SearchResultControlMenuItems {
+    pub add_to_favorites: nwg::MenuItem,
+    pub copy_path: nwg::MenuItem,
 }
 
 struct ListItemInsert {
@@ -41,7 +30,34 @@ pub enum SortDirection {
     None,
 }
 
-impl BodyControls {
+impl SearchResultControl {
+    pub(super) fn execute_add_to_favorites(&self, app: Rc<BasicApp>) {
+        let row = self.context_menu_context_row.get();
+        let path = self.list.item(row, 4, 260).expect("invalid menu row").text;
+        let ind = Some(app.fav_dir_bar.list.len() as i32);
+        let name = self.list.item(row, 0, 260).expect("invalid menu row").text;
+        nwg::ListView::insert_items_row(
+            &app.fav_dir_bar.list,
+            ind,
+            &[name.clone(), path.clone()],
+        );
+        app.cache
+            .settings
+            .borrow_mut()
+            .add_favorite_folder(name, path);
+    }
+
+    pub(super) fn execute_copy_path(&self) {
+        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+        ctx.set_contents(
+            self.list
+                .item(self.context_menu_context_row.get(), 1, 260)
+                .unwrap()
+                .text,
+        )
+        .unwrap();
+    }
+
     //TODO: sorts and REFRESHES the column, maybe optimize later
     pub fn sort_by_column(
         &self,
@@ -83,16 +99,16 @@ impl BodyControls {
     }
 
     pub fn refresh(&self, results: Vec<SearchEngineResult>) {
-        self.results.clear();
+        self.list.clear();
         //TODO: magic number
         let items = Self::prep_data(results, 0, 50);
         for item in items {
-            nwg::ListView::insert_items_row(&self.results, item.ind, item.items.as_slice());
+            nwg::ListView::insert_items_row(&self.list, item.ind, item.items.as_slice());
         }
     }
 
     pub fn add_page(&self, cache: &Cache) {
-        let hnd = self.results.handle.hwnd().unwrap();
+        let hnd = self.list.handle.hwnd().unwrap();
         let mut max_pos = 0;
         let mut min_pos = 0;
         unsafe {
@@ -104,7 +120,7 @@ impl BodyControls {
             return;
         }
         let curr_res = cache.current_results.borrow_mut();
-        let len = self.results.len();
+        let len = self.list.len();
         if len == curr_res.len() {
             return;
         }
@@ -115,58 +131,11 @@ impl BodyControls {
 
         for (ind, res) in prep.iter().enumerate() {
             nwg::ListView::insert_items_row(
-                &self.results,
+                &self.list,
                 Some((ind + len - 1) as i32),
                 res.items.as_slice(),
             );
         }
-    }
-
-    pub fn show_context_menu_results(&self, evt_data: &EventData) {
-        if !Self::valid_context_menu_click(&self.results, evt_data) {
-            return;
-        }
-        self.context_menu_target.set(ContextMenuTarget::ResultsList);
-        let is_folder = self
-            .results
-            .item(evt_data.on_list_view_item_index().0, 2, 260)
-            .expect("Invalid column clicked")
-            .text
-            .eq("Directory");
-        self.item_context_menu_remove_as_fav.set_enabled(false);
-        //ignoring the fact that it might be already added because it doesnt cause any trouble
-        self.item_context_menu_add_to_fav.set_enabled(is_folder);
-        self.show_context_menu(evt_data);
-    }
-
-    pub fn show_context_menu_sidebar(&self, evt_data: &EventData) {
-        if !Self::valid_context_menu_click(&self.directory_sidebar, evt_data) {
-            return;
-        }
-        self.context_menu_target.set(ContextMenuTarget::Sidebar);
-        self.item_context_menu_add_to_fav.set_enabled(false);
-        self.item_context_menu_remove_as_fav.set_enabled(true);
-        self.show_context_menu(evt_data);
-    }
-
-    fn valid_context_menu_click(list_view: &nwg::ListView, evt_data: &EventData) -> bool {
-        let (row, _col) = evt_data.on_list_view_item_index();
-        if row >= list_view.len() {
-            //Clicked on empty field
-            return false;
-        }
-
-        true
-    }
-
-    fn show_context_menu(&self, evt_data: &EventData) {
-        let mut cursor_pos: POINT = POINT { x: 0, y: 0 };
-        unsafe {
-            GetCursorPos(&mut cursor_pos);
-        }
-        self.item_context_menu.popup(cursor_pos.x, cursor_pos.y);
-        self.context_menu_row_index
-            .set(evt_data.on_list_view_item_index().0);
     }
 
     fn prep_data(

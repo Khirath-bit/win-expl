@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 
-use crate::{components::list::SortDirection, search_engine::SearchEngineResult, settings::Settings};
+use crate::{components::search_result_control::SortDirection, search_engine::SearchEngineResult, settings::Settings};
 
 #[derive(Default)]
 pub struct Cache {

@@ -15,6 +15,10 @@
     {
       "name": "repos",
       "path": "C:\\\\repos"
+    },
+    {
+      "name": "Espressif",
+      "path": "C:\\Espressif"
     }
   ]
 }

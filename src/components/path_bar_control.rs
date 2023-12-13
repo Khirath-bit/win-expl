@@ -1,9 +1,9 @@
 #[derive(Default)]
-pub struct PathBar {
+pub struct PathBarControl {
     pub view: nwg::TextBox,
 }
 
-impl PathBar {
+impl PathBarControl {
     pub fn get_path(&self) -> Result<String, String> {
         if self.view.text().is_empty() {
             self.view.set_text("C:");
