@@ -1,15 +1,12 @@
 use nwg::EventData;
 use std::rc::Rc;
 use time::Instant;
-use winapi::{
-    shared::windef::POINT,
-    um::winuser::{self, GetCursorPos, GetScrollPos, SB_VERT, GetScrollRange},
-};
+use winapi::um::winuser::{self};
 
 use crate::{
-    app::{BasicApp, BasicAppUi},
+    app::BasicAppUi,
     search_engine::{SearchEngine, parameter_parser::SearchEngineParameter},
-    win::key_codes::VirtualKeyCode, debug,
+    win::key_codes::VirtualKeyCode
 };
 use clipboard::{ClipboardContext, ClipboardProvider};
 
@@ -51,15 +48,12 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                             if term.is_err() {
                                 return;
                             }
-                            let mut searching_for_matches:i128 = 0;
-                            let mut validating_folder:i128 = 0;
-                            let res = SearchEngine::search(&term.unwrap(), &pth.unwrap(), 0, &mut searching_for_matches, &mut validating_folder);
-                            debug!(searching_for_matches/1000000, validating_folder);
+                            let res = SearchEngine::search(&term.unwrap(), &pth.unwrap(), 0);
                             if res.is_err() {
                                 return; //Search term invalid. TODO: MAYBE inform user, but most likely search term isnt completed yet
                             }
                             app.cache.current_results.replace(res.clone().unwrap());
-                            app.result_list.refresh(res.unwrap());
+                            app.body.refresh(res.unwrap());
                             let elapsed = now.elapsed();
                             app.status_bar
                                 .search_duration
@@ -68,8 +62,8 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                     }
                 }
                 E::OnListViewColumnClick => {
-                    if handle == app.result_list.view {
-                        app.result_list.sort_by_column(
+                    if handle == app.body.results {
+                        app.body.sort_by_column(
                             &mut app.cache.result_sort_direction.borrow_mut(),
                             evt_data.on_list_view_item_index().1,
                             app.cache.current_results.borrow_mut().to_vec(),
@@ -77,19 +71,27 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                     }
                 }
                 E::OnListViewClick => {
-                    if handle == app.directory_sidebar {
+                    if handle == app.body.directory_sidebar {
                         let (row, _col) = evt_data.on_list_view_item_index();
-                        let path = app.directory_sidebar.item(row, 1, 260).unwrap().text;
+                        if row >= app.body.directory_sidebar.len() {
+                            //Clicked on empty field
+                            return;
+                        }
+                        let path = app.body.directory_sidebar.item(row, 1, 260).unwrap().text;
                         app.path_bar.move_into_directory(path);
                         //triggers event
                         app.search_input.set_text("");
                     }
                 }
                 E::OnListViewDoubleClick => {
-                    if handle == app.result_list.view {
+                    if handle == app.body.results {
                         let (row, _col) = evt_data.on_list_view_item_index();
-                        let file_type = app.result_list.view.item(row, 2, 10).unwrap().text;
-                        let res = app.result_list.view.item(row, 4, 260).unwrap();
+                        if row >= app.body.results.len() {
+                            //Clicked on empty field
+                            return;
+                        }
+                        let file_type = app.body.results.item(row, 2, 10).unwrap().text;
+                        let res = app.body.results.item(row, 4, 260).unwrap();
                         if !file_type.eq("Directory") {
                             let _ = open::that(&res.text);
                             return;
@@ -112,45 +114,45 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                     }
                 }
                 E::OnListViewRightClick => {
-                    if handle == app.result_list.view {
-                        let mut cursor_pos: POINT = POINT { x: 0, y: 0 };
-                        unsafe {
-                            GetCursorPos(&mut cursor_pos);
-                        }
-                        app.result_list
-                            .item_context_menu
-                            .popup(cursor_pos.x, cursor_pos.y);
-                        app.result_list
-                            .context_menu_row_index
-                            .set(evt_data.on_list_view_item_index().0)
+                    if handle == app.body.results {
+                        app.body.show_context_menu_results(&evt_data);
+                    } else if handle == app.body.directory_sidebar {
+                        app.body.show_context_menu_sidebar(&evt_data);
                     }
                 }
                 E::OnMenuItemSelected => {
-                    if handle == app.result_list.item_context_menu_copy {
+                    if handle == app.body.item_context_menu_copy {
                         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
                         ctx.set_contents(
-                            app.result_list
-                                .view
-                                .item(app.result_list.context_menu_row_index.get(), 4, 260)
+                            app.body
+                                .results
+                                .item(app.body.context_menu_row_index.get(), 4, 260)
                                 .unwrap()
                                 .text,
                         )
                         .unwrap();
+                    } else if handle == app.body.item_context_menu_add_to_fav {
+                        let row = app.body.context_menu_row_index.get();
+                        let path = app.body.results.item(row, 4, 260).expect("invalid menu row").text;
+                        let ind = Some(app.body.directory_sidebar.len() as i32);
+                        let name = app.body.results.item(row, 0, 260).expect("invalid menu row").text;
+                        nwg::ListView::insert_items_row(&app.body.directory_sidebar, ind, &[name.clone(), path.clone()]);
+                        app.cache.settings.borrow_mut().add_favorite_folder(name, path);
                     }
                 }
                 E::OnMouseWheel => {
-                    if handle == app.result_list.view {
-                        app.result_list.add_page(&app.cache);
+                    if handle == app.body.results {
+                        app.body.add_page(&app.cache);
                         app.status_bar
                                 .result_count
-                                .set_text(&format!("{} results", app.result_list.view.len()));
+                                .set_text(&format!("{} results", app.body.results.len()));
                     }
                 }
                 E::OnListViewItemInsert => {
-                    if handle == app.result_list.view {
+                    if handle == app.body.results {
                         app.status_bar
                                 .result_count
-                                .set_text(&format!("{} results", app.result_list.view.len()));
+                                .set_text(&format!("{} results", app.body.results.len()));
                     }
                 }
                 _ => {}

@@ -10,7 +10,7 @@ impl PathBar {
             return Err(String::from("No path found"));
         }
 
-        Ok(String::from(self.view.text().replace(' ', "").trim()) + "\\")
+        Ok(String::from(self.view.text().trim()) + "\\")
     }
 
     pub fn move_into_directory(&self, dir_path: String) {

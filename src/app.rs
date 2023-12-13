@@ -1,4 +1,4 @@
-use crate::components::list::ResultList;
+use crate::components::list::BodyControls;
 use crate::components::load_components;
 use crate::components::path_bar::PathBar;
 use crate::components::status_bar::ExplStatusBar;
@@ -13,14 +13,14 @@ use std::rc::Rc;
 pub struct BasicApp {
     pub window: nwg::Window,
     pub name_edit: nwg::TextInput,
-    pub directory_sidebar: nwg::ListView,
     pub last_page_btn: nwg::Button,
     pub next_page_btn: nwg::Button,
     pub refresh_page_btn: nwg::Button,
     pub copy_path_btn: nwg::Button,
     pub search_input: nwg::TextInput,
     pub body_layout: nwg::GridLayout,
-    pub result_list: ResultList,
+    pub file_dialog: nwg::FileDialog,
+    pub body: BodyControls,
     pub path_bar: PathBar,
     pub resource_manager: Resources,
     pub status_bar: ExplStatusBar,
@@ -28,10 +28,6 @@ pub struct BasicApp {
 }
 
 impl BasicApp {
-    pub fn say_hello(&self) {
-        nwg::modal_info_message(&self.window, "Hello", "Hello");
-    }
-
     pub fn display_error(&self, e: String) {
         nwg::modal_error_message(&self.window, "Error occurred", &e);
     }

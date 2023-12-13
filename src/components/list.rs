@@ -1,24 +1,39 @@
 use std::cell::Cell;
 
-use crate::{search_engine::SearchEngineResult, debug, memory::cache::Cache};
-use nwg::{InsertListViewItem, stretch::style::AlignItems};
-use time::{format_description, OffsetDateTime, Instant};
-use winapi::um::winuser::{GetScrollRange, SB_VERT, GetScrollPos};
+use crate::{memory::cache::Cache, search_engine::SearchEngineResult};
+use nwg::EventData;
+use time::{format_description, OffsetDateTime};
+use winapi::{
+    shared::windef::POINT,
+    um::winuser::{GetCursorPos, GetScrollPos, GetScrollRange, SB_VERT},
+};
 
 #[derive(Default)]
-pub struct ResultList {
-    pub view: nwg::ListView,
+pub struct BodyControls {
+    pub results: nwg::ListView,
     pub item_context_menu: nwg::Menu,
     pub item_context_menu_copy: nwg::MenuItem,
+    pub item_context_menu_add_to_fav: nwg::MenuItem,
+    pub item_context_menu_remove_as_fav: nwg::MenuItem,
+    pub directory_sidebar: nwg::ListView,
     pub context_menu_row_index: Cell<usize>,
+    context_menu_target: Cell<ContextMenuTarget>,
+}
+
+#[derive(Default)]
+enum ContextMenuTarget {
+    #[default]
+    None,
+    Sidebar,
+    ResultsList,
 }
 
 struct ListItemInsert {
-    ind: Option<i32>, 
-    items: Vec<String>
+    ind: Option<i32>,
+    items: Vec<String>,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub enum SortDirection {
     Asc,
     Desc,
@@ -26,7 +41,7 @@ pub enum SortDirection {
     None,
 }
 
-impl ResultList {
+impl BodyControls {
     //TODO: sorts and REFRESHES the column, maybe optimize later
     pub fn sort_by_column(
         &self,
@@ -68,36 +83,28 @@ impl ResultList {
     }
 
     pub fn refresh(&self, results: Vec<SearchEngineResult>) {
-        self.view.clear();
-        let mut now = Instant::now();
+        self.results.clear();
         //TODO: magic number
         let items = Self::prep_data(results, 0, 50);
-        let cleaning_data = now.elapsed().whole_milliseconds();
-        now = Instant::now();
         for item in items {
-            nwg::ListView::insert_items_row(
-                &self.view,
-                item.ind,
-                item.items.as_slice(),
-            );
+            nwg::ListView::insert_items_row(&self.results, item.ind, item.items.as_slice());
         }
-        let printing_data = now.elapsed().whole_milliseconds();
-        debug!(cleaning_data, printing_data);
     }
 
-    pub fn add_page(&self, cache: &Cache){
-        let hnd = self.view.handle.hwnd().unwrap();
+    pub fn add_page(&self, cache: &Cache) {
+        let hnd = self.results.handle.hwnd().unwrap();
         let mut max_pos = 0;
         let mut min_pos = 0;
         unsafe {
             GetScrollRange(hnd, SB_VERT as i32, &mut min_pos, &mut max_pos);
         }
         let vertical_scroll_pos = unsafe { GetScrollPos(hnd, SB_VERT as i32) };
-        if (vertical_scroll_pos - max_pos).abs() != 25 { //25 strangely appeared to be the offset to the bottom, maybe because of the style?
+        if (vertical_scroll_pos - max_pos).abs() != 25 {
+            //25 strangely appeared to be the offset to the bottom, maybe because of the style?
             return;
         }
         let curr_res = cache.current_results.borrow_mut();
-        let len = self.view.len();
+        let len = self.results.len();
         if len == curr_res.len() {
             return;
         }
@@ -106,16 +113,67 @@ impl ResultList {
         let e = curr_res.clone();
         let prep = Self::prep_data(e, len, 50);
 
-        for (ind, res) in  prep.iter().enumerate() {
+        for (ind, res) in prep.iter().enumerate() {
             nwg::ListView::insert_items_row(
-                &self.view,
-                Some((ind+len-1) as i32),
-                res.items.as_slice()
+                &self.results,
+                Some((ind + len - 1) as i32),
+                res.items.as_slice(),
             );
         }
     }
 
-    fn prep_data(results: Vec<SearchEngineResult>, skip: usize, take: usize) -> Vec<ListItemInsert> {
+    pub fn show_context_menu_results(&self, evt_data: &EventData) {
+        if !Self::valid_context_menu_click(&self.results, evt_data) {
+            return;
+        }
+        self.context_menu_target.set(ContextMenuTarget::ResultsList);
+        let is_folder = self
+            .results
+            .item(evt_data.on_list_view_item_index().0, 2, 260)
+            .expect("Invalid column clicked")
+            .text
+            .eq("Directory");
+        self.item_context_menu_remove_as_fav.set_enabled(false);
+        //ignoring the fact that it might be already added because it doesnt cause any trouble
+        self.item_context_menu_add_to_fav.set_enabled(is_folder);
+        self.show_context_menu(evt_data);
+    }
+
+    pub fn show_context_menu_sidebar(&self, evt_data: &EventData) {
+        if !Self::valid_context_menu_click(&self.directory_sidebar, evt_data) {
+            return;
+        }
+        self.context_menu_target.set(ContextMenuTarget::Sidebar);
+        self.item_context_menu_add_to_fav.set_enabled(false);
+        self.item_context_menu_remove_as_fav.set_enabled(true);
+        self.show_context_menu(evt_data);
+    }
+
+    fn valid_context_menu_click(list_view: &nwg::ListView, evt_data: &EventData) -> bool {
+        let (row, _col) = evt_data.on_list_view_item_index();
+        if row >= list_view.len() {
+            //Clicked on empty field
+            return false;
+        }
+
+        true
+    }
+
+    fn show_context_menu(&self, evt_data: &EventData) {
+        let mut cursor_pos: POINT = POINT { x: 0, y: 0 };
+        unsafe {
+            GetCursorPos(&mut cursor_pos);
+        }
+        self.item_context_menu.popup(cursor_pos.x, cursor_pos.y);
+        self.context_menu_row_index
+            .set(evt_data.on_list_view_item_index().0);
+    }
+
+    fn prep_data(
+        results: Vec<SearchEngineResult>,
+        skip: usize,
+        take: usize,
+    ) -> Vec<ListItemInsert> {
         let mut items: Vec<ListItemInsert> = Vec::new();
         for (ind, f) in results.iter().skip(skip).take(take).enumerate() {
             let chrono_time: OffsetDateTime = f.modified.into();
@@ -139,7 +197,7 @@ impl ResultList {
                 _ => "".into(),
             };
 
-            items.push(ListItemInsert{
+            items.push(ListItemInsert {
                 ind: Some(ind.try_into().unwrap()),
                 items: vec![
                     f.name.clone(),
@@ -147,7 +205,7 @@ impl ResultList {
                     file_type_str.into(),
                     size,
                     f.full_path.clone(),
-                ]
+                ],
             });
         }
 

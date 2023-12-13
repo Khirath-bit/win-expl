@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use nwg::Bitmap;
 
 pub struct Resources {
-    resource_paths: HashMap<ResourceType, String>,
+    resource_paths: HashMap<ResourceType, String>
 }
 
 #[derive(Eq, PartialEq, Hash)]
@@ -25,7 +25,7 @@ impl Resources {
         data.insert(ResourceType::Copy, "./assets/copy.png".into());
 
         Resources {
-            resource_paths: data,
+            resource_paths: data
         }
     }
 

@@ -1,12 +1,10 @@
 use std::{
     fs::{self, DirEntry, FileType},
     os::windows::fs::MetadataExt,
-    time::SystemTime, cell::RefCell,
+    time::SystemTime,
 };
 
-use time::Instant;
-
-use crate::{search_engine::parameter_parser::SearchEngineParameter, debug};
+use crate::search_engine::parameter_parser::SearchEngineParameter;
 
 pub mod parameter_parser;
 
@@ -35,20 +33,16 @@ impl From<&DirEntry> for SearchEngineResult {
         }
     }
 }
-
+#[allow(clippy::all)]
 impl SearchEngine {
     pub fn search<'a>(
         p: &'a SearchEngineParameter,
         current_directory: &'a str,
         curr_depth: usize,
-        benchmark: &mut i128,
-        benchmark2: &mut i128,
     ) -> Result<Vec<SearchEngineResult>, ()> {
         let results = fs::read_dir(current_directory);
         #[allow(unused_assignments)]
         let mut s_e_results: Vec<SearchEngineResult> = Vec::new();
-
-        let mut now = Instant::now();
         match results {
             Ok(r) => {
                 s_e_results = r
@@ -75,13 +69,10 @@ impl SearchEngine {
             Err(_) => return Err(()),
         }
 
-        *benchmark += now.elapsed().whole_nanoseconds();
-
         if curr_depth == p.depth {
             return Ok(s_e_results);
         }
-
-        now = Instant::now();
+        
         let mut additional_results: Vec<SearchEngineResult> = Vec::new();
 
         let res_iter = fs::read_dir(current_directory).unwrap().filter_map(|f| {
@@ -94,10 +85,8 @@ impl SearchEngine {
             }
         });
 
-        *benchmark2 += now.elapsed().whole_nanoseconds();
-
         for f in res_iter {
-            if let Ok(mut test) = SearchEngine::search(p, f.path().to_str().unwrap(), curr_depth + 1, benchmark, benchmark2) {
+            if let Ok(mut test) = SearchEngine::search(p, f.path().to_str().unwrap(), curr_depth + 1) {
                 additional_results.append(&mut test);
             }
         }

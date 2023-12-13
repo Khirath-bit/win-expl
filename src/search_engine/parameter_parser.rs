@@ -1,6 +1,4 @@
-use std::{fs::DirEntry, os::windows::fs::MetadataExt, error::Error};
-
-use time::Instant;
+use std::{fs::DirEntry, os::windows::fs::MetadataExt};
 
 use crate::win::file_attributes::FileAttributes;
 
@@ -18,6 +16,7 @@ pub struct SearchEngineParameter {
 }
 
 impl SearchEngineParameter {
+    #[allow(clippy::all)]
     pub fn parse_search_term(t: &str) -> Result<SearchEngineParameter, ()> {
         let parts: Vec<String> = t.split('!').map(|s| s.to_string()).collect();
 

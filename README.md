@@ -8,6 +8,7 @@
     - sidebar for common folders
     - icons for common file types and folders
     - finish status bar
+    - change back to last folder and add upp button to move to parent folder
 - Design
     - hook onto window events to color stuff
 - tests

@@ -41,5 +41,12 @@ pub fn load(data: &mut BasicApp) -> Result<(), NwgError> {
 
     nwg::Window::invalidate(&data.window);
 
+    nwg::FileDialog::builder()
+        .action(nwg::FileDialogAction::OpenDirectory)
+        .default_folder(std::env::var("UserProfile").unwrap())
+        .multiselect(false)
+        .title("Search for a directory to add")
+        .build(&mut data.file_dialog)?;
+
     Ok(())
 }
