@@ -17,9 +17,9 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v2
       - name: Setup | Rust
-        uses: ATiltedTree/setup-rust@v1
+        uses: moonrepo/setup-rust@v1
         with:
-          rust-version: 1.74.0
+          channel: 1.74.0
           components: clippy
       - name: Build | Lint
         run: cargo clippy
@@ -30,8 +30,8 @@ jobs:
       - name: Setup | Checkout
         uses: actions/checkout@v2
       - name: Setup | Rust
-        uses: ATiltedTree/setup-rust@v1
+        uses: moonrepo/setup-rust@v1
         with:
-          rust-version: 1.74.0
+          channel: 1.74.0
       - name: Build | Compile
         run: cargo check
