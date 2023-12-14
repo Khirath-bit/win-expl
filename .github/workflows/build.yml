@@ -12,7 +12,7 @@ env:
 jobs:
   lint:
     name: Lint
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v2
@@ -25,7 +25,7 @@ jobs:
         run: cargo clippy
   compile:
     name: Compile
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - name: Setup | Checkout
         uses: actions/checkout@v2
