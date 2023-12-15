@@ -1,6 +1,6 @@
 # Faster win explorer
 [![build](https://github.com/Khirath-bit/win-expl/actions/workflows/build.yml/badge.svg)](https://github.com/Khirath-bit/win-expl/actions/workflows/build.yml)
-[![tests](https://github.com/Khirath-bit/win-expl/actions/workflows/run-tests.yml/badge.svg)](https://github.com/Khirath-bit/win-expl/actions/workflows/run-tests.yml)
+[![tests - search engine](https://github.com/Khirath-bit/win-expl/actions/workflows/run-tests-search-engine.yml/badge.svg)](https://github.com/Khirath-bit/win-expl/actions/workflows/run-tests-search-engine.yml)
 
 
 ## TODOS

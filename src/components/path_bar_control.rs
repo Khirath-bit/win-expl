@@ -32,6 +32,7 @@ impl PathBarControl {
         !self.last_page.borrow_mut().all_read()
     }
 
+    #[allow(unused_assignments)]
     pub fn move_one_back(&self) {
         let mut val = self.last_page.borrow_mut().pop();
         if val.is_none() {
