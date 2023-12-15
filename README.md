@@ -9,6 +9,8 @@
     - icons for common file types and folders
     - finish status bar
     - file preview
+    - context menu copy hash values of files (md5, sha1, sha256, ...) 
+    - copy name of file with right click context menu
 - Design
     - hook onto window events to color stuff
 - tests
