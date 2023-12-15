@@ -8,6 +8,7 @@
     - search help dialog with subcommands
     - icons for common file types and folders
     - finish status bar
+    - file preview
 - Design
     - hook onto window events to color stuff
 - tests
