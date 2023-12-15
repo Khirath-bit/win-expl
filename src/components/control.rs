@@ -1,9 +1,15 @@
-use nwg::{ListViewExFlags, ListViewFlags, ListViewStyle, NwgError, ButtonFlags, TextBoxFlags, LabelFlags};
+use nwg::{
+    ButtonFlags, LabelFlags, ListViewExFlags, ListViewFlags, ListViewStyle, NwgError, TextBoxFlags,
+};
 use winapi::um::winuser::{self, SS_RIGHT};
 
 use crate::{app::BasicApp, resource_manager::ResourceType};
 
-use super::{fav_dir_bar::FavoriteDirSidebar, search_result_control::SearchResultControl, header_control::HeaderControl, path_bar_control::PathBarControl, status_bar_control::StatusBarControl};
+use super::{
+    fav_dir_bar::FavoriteDirSidebar, header_control::HeaderControl,
+    path_bar_control::PathBarControl, search_result_control::SearchResultControl,
+    status_bar_control::StatusBarControl,
+};
 
 pub trait Control {
     fn load_components(app: &mut BasicApp) -> Result<(), NwgError>;
@@ -41,12 +47,12 @@ impl Control for StatusBarControl {
 impl Control for PathBarControl {
     fn load_components(app: &mut BasicApp) -> Result<(), NwgError> {
         nwg::TextBox::builder()
-        .position((120, 10))
-        .size((670, 30))
-        .text("C:")
-        .flags(TextBoxFlags::VISIBLE)
-        .parent(&app.window)
-        .build(&mut app.header.path_bar.view)?;
+            .position((120, 10))
+            .size((670, 30))
+            .text("C:")
+            .flags(TextBoxFlags::VISIBLE)
+            .parent(&app.window)
+            .build(&mut app.header.path_bar.view)?;
 
         Ok(())
     }
@@ -55,48 +61,57 @@ impl Control for PathBarControl {
 impl Control for HeaderControl {
     fn load_components(app: &mut BasicApp) -> Result<(), NwgError> {
         nwg::Button::builder()
-        .size((30, 30))
-        .position((10, 10))
-        .parent(&app.window)
-        .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
-        .bitmap(Some(
-            &app.resource_manager.get_bitmap(ResourceType::ArrowLeft)?,
-        ))
-        .build(&mut app.header.last_page_btn)?;
+            .size((30, 30))
+            .position((10, 10))
+            .parent(&app.window)
+            .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
+            .bitmap(Some(
+                &app.resource_manager.get_bitmap(ResourceType::ArrowLeft)?,
+            ))
+            .build(&mut app.header.last_page_btn)?;
 
-    unsafe {
-        winuser::EnableWindow(app.header.last_page_btn.handle.hwnd().unwrap(), 0);
-    }
+        nwg::Button::builder()
+            .size((30, 30))
+            .position((47, 10))
+            .parent(&app.window)
+            .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
+            .bitmap(Some(
+                &app.resource_manager.get_bitmap(ResourceType::ArrowUp)?,
+            ))
+            .build(&mut app.header.parent_page_btn)?;
+        unsafe {
+            winuser::EnableWindow(app.header.last_page_btn.handle.hwnd().unwrap(), 0);
+        }
 
-    nwg::Button::builder()
-        .size((30, 30))
-        .position((80, 10))
-        .parent(&app.window)
-        .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
-        .bitmap(Some(
-            &app.resource_manager.get_bitmap(ResourceType::Refresh)?,
-        ))
-        .build(&mut app.header.refresh_btn)?;
+        nwg::Button::builder()
+            .size((30, 30))
+            .position((80, 10))
+            .parent(&app.window)
+            .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
+            .bitmap(Some(
+                &app.resource_manager.get_bitmap(ResourceType::Refresh)?,
+            ))
+            .build(&mut app.header.refresh_btn)?;
 
-    nwg::TextInput::builder()
-        .position((900, 10))
-        .size((290, 30))
-        .parent(&app.window)
-        .placeholder_text(Some("Search..."))
-        .build(&mut app.header.search_input)?;
+        nwg::TextInput::builder()
+            .position((900, 10))
+            .size((290, 30))
+            .parent(&app.window)
+            .placeholder_text(Some("Search..."))
+            .build(&mut app.header.search_input)?;
 
-    nwg::Button::builder()
-        .size((30, 30))
-        .position((795, 10))
-        .parent(&app.window)
-        .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
-        .bitmap(Some(&app.resource_manager.get_bitmap(ResourceType::Copy)?))
-        .build(&mut app.header.copy_path_btn)?;
+        nwg::Button::builder()
+            .size((30, 30))
+            .position((795, 10))
+            .parent(&app.window)
+            .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
+            .bitmap(Some(&app.resource_manager.get_bitmap(ResourceType::Copy)?))
+            .build(&mut app.header.copy_path_btn)?;
 
-    //Call here because its part of the header
-    PathBarControl::load_components(app)?;
+        //Call here because its part of the header
+        PathBarControl::load_components(app)?;
 
-    Ok(())
+        Ok(())
     }
 }
 
@@ -111,40 +126,50 @@ impl Control for SearchResultControl {
             .background_color([128, 128, 128])
             .build(&mut app.search_results.list)?;
 
-        app.search_results.list.insert_column(nwg::InsertListViewColumn {
-            index: Some(0),
-            fmt: None,
-            width: Some(1070 / 2),
-            text: Some("Name".into()),
-        });
+        app.search_results
+            .list
+            .insert_column(nwg::InsertListViewColumn {
+                index: Some(0),
+                fmt: None,
+                width: Some(1070 / 2),
+                text: Some("Name".into()),
+            });
 
-        app.search_results.list.insert_column(nwg::InsertListViewColumn {
-            index: Some(1),
-            fmt: None,
-            width: Some(1070 / 2 / 3),
-            text: Some("Date modified".into()),
-        });
+        app.search_results
+            .list
+            .insert_column(nwg::InsertListViewColumn {
+                index: Some(1),
+                fmt: None,
+                width: Some(1070 / 2 / 3),
+                text: Some("Date modified".into()),
+            });
 
-        app.search_results.list.insert_column(nwg::InsertListViewColumn {
-            index: Some(2),
-            fmt: None,
-            width: Some(1070 / 2 / 3),
-            text: Some("Type".into()),
-        });
+        app.search_results
+            .list
+            .insert_column(nwg::InsertListViewColumn {
+                index: Some(2),
+                fmt: None,
+                width: Some(1070 / 2 / 3),
+                text: Some("Type".into()),
+            });
 
-        app.search_results.list.insert_column(nwg::InsertListViewColumn {
-            index: Some(3),
-            fmt: None,
-            width: Some(1070 / 2 / 3),
-            text: Some("Size".into()),
-        });
+        app.search_results
+            .list
+            .insert_column(nwg::InsertListViewColumn {
+                index: Some(3),
+                fmt: None,
+                width: Some(1070 / 2 / 3),
+                text: Some("Size".into()),
+            });
 
-        app.search_results.list.insert_column(nwg::InsertListViewColumn {
-            index: Some(4),
-            fmt: None,
-            width: Some(0),
-            text: Some("FULLPATH".into()),
-        });
+        app.search_results
+            .list
+            .insert_column(nwg::InsertListViewColumn {
+                index: Some(4),
+                fmt: None,
+                width: Some(0),
+                text: Some("FULLPATH".into()),
+            });
 
         app.search_results.list.set_headers_enabled(true);
 

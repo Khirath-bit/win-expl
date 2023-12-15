@@ -1,6 +1,11 @@
+use std::cell::RefCell;
+
+use crate::ring_buffer::RingBuffer;
+
 #[derive(Default)]
 pub struct PathBarControl {
     pub view: nwg::TextBox,
+    last_page: RefCell<RingBuffer<String>>,
 }
 
 impl PathBarControl {
@@ -14,12 +19,26 @@ impl PathBarControl {
     }
 
     pub fn move_into_directory(&self, dir_path: String) {
+        self.last_page.borrow_mut().push(self.view.text());
         self.view.clear();
         self.view.set_text(&dir_path);
     }
 
     pub fn depth(&self) -> usize {
         self.view.text().matches('\\').count()
+    }
+
+    pub fn any_last_page(&self) -> bool {
+        !self.last_page.borrow_mut().all_read()
+    }
+
+    pub fn move_one_back(&self) {
+        let mut val = self.last_page.borrow_mut().pop();
+        if val.is_none() {
+            return;
+        }
+        self.view.set_text(&val.unwrap());
+        val = Some(self.view.text());
     }
 
     pub fn move_one_up(&self) {
@@ -36,6 +55,7 @@ impl PathBarControl {
                 .take(path_parts.len() - 2)
                 .fold(first.clone(), |acc, part| acc + "\\" + part);
             self.view.set_text(&result);
+            self.last_page.borrow_mut().push(self.view.text());
         }
     }
 }

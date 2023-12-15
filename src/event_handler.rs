@@ -24,12 +24,16 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                         //not required because setting the text triggers an event app.result_list.refresh(SearchEngine::default().search("", &app.path_bar.get_path().unwrap()))
                     } else if handle == app.header.last_page_btn {
                         //Only triggers when enabled
-                        app.header.path_bar.move_one_up();
+                        app.header.path_bar.move_one_back();
                         //triggers event
                         app.header.search_input.set_text("");
                     } else if handle == app.header.copy_path_btn {
                         let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
                         ctx.set_contents(app.header.path_bar.get_path().unwrap()).unwrap();
+                    } else if handle == app.header.parent_page_btn {
+                        app.header.path_bar.move_one_up();
+                        //triggers event
+                        app.header.search_input.set_text("");
                     }
                 }
                 E::OnWindowClose => {
@@ -144,14 +148,9 @@ pub fn handle_events(ui: &mut BasicAppUi) {
             }
 
             //TODO optimize to only update if an event was called that can change the depth. This way it fires a million times
-            if app.header.path_bar.depth() > 0 {
-                unsafe {
-                    winuser::EnableWindow(app.header.last_page_btn.handle.hwnd().unwrap(), 1);
-                }
-            } else {
-                unsafe {
-                    winuser::EnableWindow(app.header.last_page_btn.handle.hwnd().unwrap(), 0);
-                }
+            unsafe {
+                winuser::EnableWindow(app.header.last_page_btn.handle.hwnd().unwrap(), app.header.path_bar.any_last_page() as i32);
+                winuser::EnableWindow(app.header.parent_page_btn.handle.hwnd().unwrap(), (app.header.path_bar.depth() > 0) as i32);
             }
         }
     };

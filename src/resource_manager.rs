@@ -9,7 +9,7 @@ pub struct Resources {
 #[derive(Eq, PartialEq, Hash)]
 pub enum ResourceType {
     ArrowLeft,
-    ArrowRight,
+    ArrowUp,
     Refresh,
     Copy,
 }
@@ -20,7 +20,7 @@ impl Resources {
         let mut data = HashMap::new();
 
         data.insert(ResourceType::ArrowLeft, "./assets/arrow-left.png".into());
-        data.insert(ResourceType::ArrowRight, "./assets/arrow-right.png".into());
+        data.insert(ResourceType::ArrowUp, "./assets/arrow-up.png".into());
         data.insert(ResourceType::Refresh, "./assets/refresh.png".into());
         data.insert(ResourceType::Copy, "./assets/copy.png".into());
 

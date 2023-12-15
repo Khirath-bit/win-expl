@@ -9,6 +9,7 @@ mod resource_manager;
 pub mod search_engine;
 mod win;
 mod settings;
+pub mod ring_buffer;
 
 pub struct Test {}
 

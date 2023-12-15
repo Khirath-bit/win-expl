@@ -6,8 +6,7 @@ mod resource_manager;
 pub mod search_engine;
 mod win;
 mod settings;
-
-pub struct Test {}
+pub mod ring_buffer;
 
 #[macro_export]
 macro_rules! debug {
