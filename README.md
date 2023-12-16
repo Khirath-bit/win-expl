@@ -9,8 +9,8 @@
     - icons for common file types and folders
     - finish status bar
     - file preview
-    - context menu copy hash values of files (md5, sha1, sha256, ...) 
-    - copy name of file with right click context menu
+    - maybe favorite bar as tree?
+    - customization of context menu on file/folder with json in a given path for the user
 - Design
     - hook onto window events to color stuff
 - tests
@@ -18,10 +18,15 @@
     - comments
     - index of folder that are created by e.g. system because checkup takes too much time
     - currently a depth first search is executed on search, maybe breadth first search and yield results after every depth iteration?
-    - ~~keep every component multiple times in app. as component, as clickable, as menuable etc so event handler is more readable and dynamic~~ Note: Maybe with some types but not really good
+    - multithreading on search
 - error handling
 - doc
 - add a logger
+
+## Refactoring
+- Result control
+    - clipboard stuff
+    - item retrieval from list (also for fav dir bar)
 
 # License
 MIT. See license file.

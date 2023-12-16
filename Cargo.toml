@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 clipboard = "0.5.0"
+lhash = { version = "1.0.1", features = ["md5", "sha1", "sha256", "sha512"] }
 nwg = { version = "^1.0.13", package = "native-windows-gui" }
 open = "5.0.1"
 serde = { version = "1.0.193", features = ["derive"] }

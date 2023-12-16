@@ -5,7 +5,7 @@ use winapi::{shared::windef::POINT, um::winuser::GetCursorPos};
 
 use crate::app::BasicApp;
 
-use super::{search_result_control::SearchResultControl, fav_dir_bar::FavoriteDirSidebar};
+use super::{search_result_control::{SearchResultControl, HashFunction}, fav_dir_bar::FavoriteDirSidebar};
 
 pub trait Menuable {
     fn open_menu(&self, evt_data: &EventData);
@@ -41,6 +41,16 @@ impl Menuable for SearchResultControl {
             self.execute_copy_path();
         } else if item.eq(&self.context_menu_items.add_to_favorites) {
             self.execute_add_to_favorites(app.clone());
+        } else if item.eq(&self.context_menu_items.copy_name) {
+            self.execute_copy_name();
+        } else if item.eq(&self.context_menu_items.md5_hash) {
+            self.copy_file_hash(HashFunction::MD5);
+        } else if item.eq(&self.context_menu_items.sha1_hash) {
+            self.copy_file_hash(HashFunction::SHA1);
+        } else if item.eq(&self.context_menu_items.sha256_hash) {
+            self.copy_file_hash(HashFunction::SHA256);
+        } else if item.eq(&self.context_menu_items.sha512_hash) {
+            self.copy_file_hash(HashFunction::SHA512);
         } //else it doesnt belong here
     }
 }

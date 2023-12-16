@@ -1,7 +1,9 @@
 use nwg::{
-    ButtonFlags, LabelFlags, ListViewExFlags, ListViewFlags, ListViewStyle, NwgError, TextBoxFlags,
+    ButtonFlags, CheckBoxFlags, LabelFlags, ListViewExFlags, ListViewFlags, ListViewStyle,
+    NwgError, TextBoxFlags,
 };
-use winapi::um::winuser::{self, SS_RIGHT};
+use time::{OffsetDateTime, format_description};
+use winapi::um::winuser::{self, BS_AUTOCHECKBOX, SS_RIGHT};
 
 use crate::{app::BasicApp, resource_manager::ResourceType};
 
@@ -19,7 +21,7 @@ impl Control for StatusBarControl {
     fn load_components(app: &mut BasicApp) -> Result<(), NwgError> {
         nwg::Label::builder()
             .parent(&app.window)
-            .background_color(Some([50, 50, 50]))
+            .background_color(Some([0x32, 0x32, 0x32]))
             .flags(LabelFlags::ELIPSIS | LabelFlags::VISIBLE)
             .position((10, 600))
             .size((100, 20))
@@ -28,7 +30,7 @@ impl Control for StatusBarControl {
         unsafe {
             nwg::Label::builder()
                 .parent(&app.window)
-                .background_color(Some([50, 50, 50]))
+                .background_color(Some([0x32, 0x32, 0x32]))
                 .flags(
                     LabelFlags::ELIPSIS
                         | LabelFlags::VISIBLE
@@ -38,7 +40,52 @@ impl Control for StatusBarControl {
                 .position((120, 600))
                 .size((100, 20))
                 .build(&mut app.status_bar.search_duration)?;
+
+            nwg::Label::builder()
+                .parent(&app.window)
+                .background_color(Some([0x32, 0x32, 0x32]))
+                .flags(
+                    LabelFlags::ELIPSIS
+                        | LabelFlags::VISIBLE
+                        | LabelFlags::from_bits_unchecked(SS_RIGHT),
+                )
+                .position((800, 600))
+                .size((200, 20))
+                .build(&mut app.status_bar.index_date)?;
         }
+
+        nwg::Button::builder()
+            .size((30, 30))
+            .position((1010, 595))
+            .parent(&app.window)
+            .flags(ButtonFlags::ICON | ButtonFlags::VISIBLE)
+            .bitmap(Some(
+                &app.resource_manager.get_bitmap(ResourceType::Refresh)?,
+            ))
+            .build(&mut app.status_bar.index_refresh)?;
+
+        unsafe {
+            nwg::CheckBox::builder()
+                .size((10, 20))
+                .position((1050, 600))
+                .parent(&app.window)
+                .text("")
+                .background_color(Some([0x32, 0x32, 0x32]))
+                .flags(CheckBoxFlags::VISIBLE | CheckBoxFlags::from_bits_unchecked(BS_AUTOCHECKBOX))
+                .focus(true)
+                .build(&mut app.status_bar.index_usage)?;
+        }
+
+        let index = app.cache.index.get_mut();
+        index.check_for_updates();
+        let chrono_time: OffsetDateTime = index.modified_date.into();
+
+        let time = chrono_time
+            .format(&format_description::parse("[year]-[month]-[day] [hour]:[minute]").unwrap())
+            .unwrap()
+            .to_string();
+
+        app.status_bar.index_date.set_text(&time);
 
         Ok(())
     }
@@ -123,7 +170,7 @@ impl Control for SearchResultControl {
             .list_style(ListViewStyle::Detailed)
             .ex_flags(ListViewExFlags::FULL_ROW_SELECT)
             .size((1070, 540))
-            .background_color([128, 128, 128])
+            .background_color([0x32, 0x32, 0x32])
             .build(&mut app.search_results.list)?;
 
         app.search_results
@@ -186,8 +233,56 @@ impl Control for SearchResultControl {
             .unwrap();
         nwg::MenuItem::builder()
             .parent(&app.search_results.context_menu)
+            .text("Copy name")
+            .build(&mut app.search_results.context_menu_items.copy_name)
+            .unwrap();
+
+        let mut seperator: nwg::MenuSeparator = Default::default();
+        nwg::MenuSeparator::builder()
+            .parent(&app.search_results.context_menu)
+            .build(&mut seperator)
+            .unwrap();
+        app.search_results
+            .context_menu_items
+            .seperator
+            .push(seperator);
+
+        nwg::MenuItem::builder()
+            .parent(&app.search_results.context_menu)
             .text("Add to favorite")
             .build(&mut app.search_results.context_menu_items.add_to_favorites)
+            .unwrap();
+
+        let mut seperator2: nwg::MenuSeparator = Default::default();
+        nwg::MenuSeparator::builder()
+            .parent(&app.search_results.context_menu)
+            .build(&mut seperator2)
+            .unwrap();
+        app.search_results
+            .context_menu_items
+            .seperator
+            .push(seperator2);
+
+        nwg::MenuItem::builder()
+            .parent(&app.search_results.context_menu)
+            .text("MD5 hash")
+            .build(&mut app.search_results.context_menu_items.md5_hash)
+            .unwrap();
+
+        nwg::MenuItem::builder()
+            .parent(&app.search_results.context_menu)
+            .text("SHA1 hash")
+            .build(&mut app.search_results.context_menu_items.sha1_hash)
+            .unwrap();
+        nwg::MenuItem::builder()
+            .parent(&app.search_results.context_menu)
+            .text("SHA256 hash")
+            .build(&mut app.search_results.context_menu_items.sha256_hash)
+            .unwrap();
+        nwg::MenuItem::builder()
+            .parent(&app.search_results.context_menu)
+            .text("SHA512 hash")
+            .build(&mut app.search_results.context_menu_items.sha512_hash)
             .unwrap();
 
         Ok(())

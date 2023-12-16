@@ -1,8 +1,10 @@
-use crate::{app::BasicApp, memory::cache::Cache, search_engine::SearchEngineResult};
+use crate::{app::BasicApp, memory::cache::Cache, search_engine::result::SearchEngineResult};
 use clipboard::{ClipboardContext, ClipboardProvider};
-use time::{OffsetDateTime, format_description};
-use std::{cell::Cell, rc::Rc};
+use lhash::{Md5, Sha1, Sha256, Sha512};
+use std::{cell::Cell, fs, rc::Rc};
+use time::{format_description, OffsetDateTime};
 use winapi::um::winuser::{GetScrollPos, GetScrollRange, SB_VERT};
+use std::fmt::Write;
 
 #[derive(Default)]
 pub struct SearchResultControl {
@@ -15,6 +17,12 @@ pub struct SearchResultControl {
 pub struct SearchResultControlMenuItems {
     pub add_to_favorites: nwg::MenuItem,
     pub copy_path: nwg::MenuItem,
+    pub copy_name: nwg::MenuItem,
+    pub md5_hash: nwg::MenuItem,
+    pub sha1_hash: nwg::MenuItem,
+    pub sha256_hash: nwg::MenuItem,
+    pub sha512_hash: nwg::MenuItem,
+    pub seperator: Vec<nwg::MenuSeparator>
 }
 
 struct ListItemInsert {
@@ -30,17 +38,20 @@ pub enum SortDirection {
     None,
 }
 
+pub enum HashFunction {
+    MD5,
+    SHA1,
+    SHA256,
+    SHA512,
+}
+
 impl SearchResultControl {
     pub(super) fn execute_add_to_favorites(&self, app: Rc<BasicApp>) {
         let row = self.context_menu_context_row.get();
         let path = self.list.item(row, 4, 260).expect("invalid menu row").text;
         let ind = Some(app.fav_dir_bar.list.len() as i32);
         let name = self.list.item(row, 0, 260).expect("invalid menu row").text;
-        nwg::ListView::insert_items_row(
-            &app.fav_dir_bar.list,
-            ind,
-            &[name.clone(), path.clone()],
-        );
+        nwg::ListView::insert_items_row(&app.fav_dir_bar.list, ind, &[name.clone(), path.clone()]);
         app.cache
             .settings
             .borrow_mut()
@@ -55,6 +66,56 @@ impl SearchResultControl {
                 .unwrap()
                 .text,
         )
+        .unwrap();
+    }
+
+    pub(super) fn execute_copy_name(&self) {
+        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+        ctx.set_contents(
+            self.list
+                .item(self.context_menu_context_row.get(), 0, 260)
+                .unwrap()
+                .text,
+        )
+        .unwrap();
+    }
+
+    pub(super) fn copy_file_hash(&self, hf: HashFunction) {
+        let path = self
+            .list
+            .item(self.context_menu_context_row.get(), 4, 260)
+            .unwrap()
+            .text;
+        let file = fs::read(path).unwrap();
+
+        let hash: Vec<u8> = match hf {
+            HashFunction::MD5 => {
+                let mut alg = Md5::new();
+                alg.update(&file);
+                alg.result().to_vec()
+            }
+            HashFunction::SHA1 => {
+                let mut alg = Sha1::new();
+                alg.update(&file);
+                alg.result().to_vec()
+            }
+            HashFunction::SHA256 => {
+                let mut alg = Sha256::new();
+                alg.update(&file);
+                alg.result().to_vec()
+            }
+            HashFunction::SHA512 => {
+                let mut alg = Sha512::new();
+                alg.update(&file);
+                alg.result().to_vec()
+            }
+        };
+
+        let mut ctx: ClipboardContext = ClipboardProvider::new().unwrap();
+        ctx.set_contents(hash.iter().fold(String::new(), |mut acc, &byte| {
+            write!(acc, "{:02X}", byte).expect("Failed to write to String");
+            acc
+        }))
         .unwrap();
     }
 

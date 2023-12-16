@@ -1,38 +1,15 @@
-use std::{
-    fs::{self, DirEntry, FileType},
-    os::windows::fs::MetadataExt,
-    time::SystemTime,
-};
+use std::fs::{self};
 
 use crate::search_engine::parameter_parser::SearchEngineParameter;
 
+use self::result::SearchEngineResult;
+
 pub mod parameter_parser;
+pub mod result;
 
 #[derive(Default, Clone)]
 pub struct SearchEngine {}
 
-#[derive(Clone, Debug)]
-pub struct SearchEngineResult {
-    pub name: String,
-    pub modified: SystemTime,
-    pub file_type: FileType,
-    pub size: u64,
-    pub full_path: String,
-}
-
-impl From<&DirEntry> for SearchEngineResult {
-    fn from(value: &DirEntry) -> Self {
-        let metadata = value.metadata().unwrap();
-
-        SearchEngineResult {
-            name: value.file_name().to_str().unwrap().into(),
-            modified: metadata.modified().unwrap(),
-            file_type: metadata.file_type(),
-            size: metadata.file_size(),
-            full_path: value.path().to_str().unwrap().into(),
-        }
-    }
-}
 #[allow(clippy::all)]
 impl SearchEngine {
     pub fn search<'a>(

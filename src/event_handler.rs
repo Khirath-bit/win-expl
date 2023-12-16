@@ -1,4 +1,4 @@
-use nwg::EventData;
+use nwg::{EventData, MessageParams, MessageChoice};
 use std::rc::Rc;
 use time::Instant;
 use winapi::um::winuser::{self};
@@ -34,6 +34,19 @@ pub fn handle_events(ui: &mut BasicAppUi) {
                         app.header.path_bar.move_one_up();
                         //triggers event
                         app.header.search_input.set_text("");
+                    } else if handle == app.status_bar.index_refresh {
+                        let ans = nwg::modal_message(&app.window, &MessageParams {
+                            title: "Refresh index",
+                            content: "Are you sure? This will take a lot of time. Up to minutes!",
+                            buttons: nwg::MessageButtons::YesNo,
+                            icons: nwg::MessageIcons::Question,
+                        });
+
+                        if ans != MessageChoice::Yes {
+                            return;
+                        }
+
+                        app.cache.index.borrow_mut().refresh(&app.status_bar.index_date);
                     }
                 }
                 E::OnWindowClose => {
